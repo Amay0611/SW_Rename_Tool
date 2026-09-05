@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "JBf2BVxzbNM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\A412810\\Documents\\VisualStudioCode\\SWファイルリネームツール\\src\\SwRenameTool.App\\SwRenameTool.App.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\A412810\\.nuget\\packages\\communitytoolkit.mvvm\\8.3.2\\communitytoolkit.mvvm.8.3.2.nupkg.sha512"
+  ],
+  "logs": []
+}

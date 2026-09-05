@@ -1,0 +1,53 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "PackAndGoPoc/1.0.0": {
+        "dependencies": {
+          "SolidWorks.Interop.sldworks": "32.5.0.48",
+          "SolidWorks.Interop.swconst": "32.5.0.48"
+        },
+        "runtime": {
+          "PackAndGoPoc.dll": {}
+        }
+      },
+      "SolidWorks.Interop.sldworks/32.5.0.48": {
+        "runtime": {
+          "SolidWorks.Interop.sldworks.dll": {
+            "assemblyVersion": "32.5.0.48",
+            "fileVersion": "32.5.0.48"
+          }
+        }
+      },
+      "SolidWorks.Interop.swconst/32.5.0.48": {
+        "runtime": {
+          "SolidWorks.Interop.swconst.dll": {
+            "assemblyVersion": "32.5.0.48",
+            "fileVersion": "32.5.0.48"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "PackAndGoPoc/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SolidWorks.Interop.sldworks/32.5.0.48": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SolidWorks.Interop.swconst/32.5.0.48": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

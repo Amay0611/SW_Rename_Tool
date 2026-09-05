@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+    <Company>AMADA CO.,LTD.</Company>
+    <!--
+      UseWPF: SolidWorksとのCOM呼び出しを単一の専用STAスレッドに固定するため、
+      System.Windows.Threading.Dispatcher（WindowsBase）を使う。
+      複数のThread Poolスレッドから交互にSolidWorksのCOMオブジェクトを呼び出すと
+      アプリがクラッシュすることを実機で確認したため、この対策を入れている。
+    -->
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      SolidWorksインストールフォルダの api\redist にある公式Primary Interop Assemblyを
+      thirdparty フォルダにコピーして参照する（早期バインディング）。
+      <COMReference>によるtlbimpベースの参照は ResolveComReference タスクが必要になり
+      dotnet CLI（.NET Core版MSBuild）ではビルドできないため使わない。
+      一方、dynamicキーワードやType.InvokeMemberによる後期バインディングは、
+      GetPackAndGoなど一部のAPIで正しく動作しないことを実機検証で確認したため、
+      事前ビルド済みの.NET DLLをそのまま参照する、この方式に統一した。
+    -->
+    <Reference Include="SolidWorks.Interop.sldworks">
+      <HintPath>..\..\thirdparty\SolidWorks.Interop.sldworks.dll</HintPath>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="SolidWorks.Interop.swconst">
+      <HintPath>..\..\thirdparty\SolidWorks.Interop.swconst.dll</HintPath>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

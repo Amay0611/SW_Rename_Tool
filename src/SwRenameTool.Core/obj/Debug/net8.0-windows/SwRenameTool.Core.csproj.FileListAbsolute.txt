@@ -1,0 +1,16 @@
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\bin\Debug\net8.0-windows\SwRenameTool.Core.deps.json
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\bin\Debug\net8.0-windows\SwRenameTool.Core.dll
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\bin\Debug\net8.0-windows\SwRenameTool.Core.pdb
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\bin\Debug\net8.0-windows\SolidWorks.Interop.sldworks.dll
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\bin\Debug\net8.0-windows\SolidWorks.Interop.swconst.dll
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRenameTool.Core.csproj.AssemblyReference.cache
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRenameTool.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRenameTool.Core.AssemblyInfoInputs.cache
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRenameTool.Core.AssemblyInfo.cs
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRenameTool.Core.csproj.CoreCompileInputs.cache
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRenameTool.Core.sourcelink.json
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRename.A848BEC9.Up2Date
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRenameTool.Core.dll
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\refint\SwRenameTool.Core.dll
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\SwRenameTool.Core.pdb
+C:\Users\A412810\Documents\VisualStudioCode\SWファイルリネームツール\src\SwRenameTool.Core\obj\Debug\net8.0-windows\ref\SwRenameTool.Core.dll
