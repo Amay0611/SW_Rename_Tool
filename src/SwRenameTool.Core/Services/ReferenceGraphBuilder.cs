@@ -139,10 +139,14 @@ public sealed class ReferenceGraphBuilder : IReferenceGraphBuilder
     }
 
     /// <summary>
-    /// サブアセンブリを辿る。最上位アセンブリが開かれていれば、配下のサブアセンブリは
-    /// 既にメモリ上にロード済みであることが多く、Component2.GetModelDoc2()で
-    /// 追加のOpenDoc6なしに取得できる。軽量読み込み等で未解決の場合のみ、
-    /// フォールバックとして明示的にOpenDoc6で開く（その場合のみ、使用後に明示的に閉じる）。
+    /// サブアセンブリを辿る。
+    /// 当初は Component2.GetModelDoc2() で最上位アセンブリに既にロード済みのドキュメントを
+    /// 再利用し、追加のOpenDoc6を省く最適化を試みていたが、実機で
+    /// 「サブアセンブリ自体は検出されるが、その配下のパーツが一切検出されない」不具合が発生し、
+    /// 軽量読み込み無効化（SolidWorksSession参照）を行っても解消しなかった。
+    /// GetModelDoc2()経由のドキュメントはFirstFeature()の走査で期待通りの結果を
+    /// 返さないことがあると考えられるため、確実性を優先し、サブアセンブリは常に
+    /// 明示的にOpenDoc6で開き直す方式に単純化した（パフォーマンスより正確性を優先）。
     /// </summary>
     private void RecurseIntoSubAssembly(
         ISldWorks sldWorks,
@@ -154,21 +158,14 @@ public sealed class ReferenceGraphBuilder : IReferenceGraphBuilder
         HashSet<string> processedAssemblies,
         CancellationToken ct)
     {
-        var childModel = comp.GetModelDoc2() as ModelDoc2;
-        var openedExplicitly = false;
-
-        if (childModel == null)
-        {
-            int errors = 0, warnings = 0;
-            childModel = sldWorks.OpenDoc6(
-                childPath,
-                (int)swDocumentTypes_e.swDocASSEMBLY,
-                (int)swOpenDocOptions_e.swOpenDocOptions_Silent,
-                "",
-                ref errors,
-                ref warnings);
-            openedExplicitly = childModel != null;
-        }
+        int errors = 0, warnings = 0;
+        var childModel = sldWorks.OpenDoc6(
+            childPath,
+            (int)swDocumentTypes_e.swDocASSEMBLY,
+            (int)swOpenDocOptions_e.swOpenDocOptions_Silent,
+            "",
+            ref errors,
+            ref warnings);
 
         if (childModel == null)
         {
@@ -181,13 +178,7 @@ public sealed class ReferenceGraphBuilder : IReferenceGraphBuilder
         }
         finally
         {
-            if (openedExplicitly)
-            {
-                CloseDocument(sldWorks, childModel);
-            }
-            // GetModelDoc2()で取得した場合は最上位アセンブリの一部としてSolidWorksが
-            // 管理しているため、CloseDocは呼ばない（呼ぶと最上位側の表示が壊れる）。
-            // COMの参照カウント解放のみ行う。
+            CloseDocument(sldWorks, childModel);
             Marshal.ReleaseComObject(childModel);
         }
     }

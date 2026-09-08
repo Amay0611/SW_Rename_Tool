@@ -9,6 +9,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationIcon />
     <Company>AMADA CO.,LTD.</Company>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

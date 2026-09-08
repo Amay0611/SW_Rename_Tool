@@ -258,14 +258,16 @@ PackAndGoPoc.exe deps "C:\SwTest\Assem1.sldasm"
 
 ## 既知の注意点
 
-- **軽量読み込み（Lightweight Components）が有効だと、`Component2.GetModelDoc2()`が
-  `null`を返すことがある（公式仕様）。** `WalkDesignTree`実装後、実機で
-  「サブアセンブリ自体は表示されるが、その配下のパーツが検出されない」不具合が発生した。
-  軽量状態のコンポーネントはモデルドキュメントを持たないため、フォールバックの
-  `OpenDoc6`頼みになるが、大規模アセンブリではネストした孫コンポーネントまで
-  連鎖的に軽量状態になり得るため、`SolidWorksSession`でSolidWorks接続時に
-  `SetUserPreferenceToggle(swAutoLoadPartsLightweight, false)`を設定し、
-  このツールで開くアセンブリは常に完全解決（非軽量）で読み込むようにして対策した。
+- **`Component2.GetModelDoc2()`経由でサブアセンブリを辿ると、配下のパーツが検出できない
+  ことがある。** `WalkDesignTree`実装後、実機で「サブアセンブリ自体は表示されるが、
+  その配下のパーツが検出されない」不具合が発生した。当初は軽量読み込み
+  （Lightweight Components、`GetModelDoc2()`が`null`を返す公式仕様）が原因と考え、
+  `SolidWorksSession`で`SetUserPreferenceToggle(swAutoLoadPartsLightweight, false)`を
+  設定して完全解決読み込みを強制したが、これでも解消しなかった。最終的に、
+  `GetModelDoc2()`経由の最適化（既にロード済みのドキュメントを再利用し、追加の
+  `OpenDoc6`を省く）自体を廃止し、サブアセンブリは常に`OpenDoc6`で明示的に開き直す
+  方式に単純化して解決した（パフォーマンスより正確性を優先。`RecurseIntoSubAssembly`）。
+  軽量読み込み無効化の設定自体は、副作用がないため残してある。
 - **`ToolboxDetector`が当初、誤ったレジストリキーを参照していた。**
   `Software\SolidWorks\Applications\Toolbox\BrowserPath`という架空のキーを見ており、
   常にToolboxパス検出0件（＝Toolbox部品が一切除外されない）状態だった。
