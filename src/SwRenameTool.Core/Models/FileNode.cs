@@ -33,9 +33,6 @@ public sealed class FileNode
     /// <summary>ユーザーが入力した新ファイル名（拡張子なし）。未入力ならnull。</summary>
     public string? NewBaseName { get; set; }
 
-    /// <summary>図面の自動追従を個別に解除しているか（LinkedDrawing側で使用）。</summary>
-    public bool IsNameSyncOverridden { get; set; }
-
     public string FileName => Path.GetFileName(FilePath);
     public string BaseName => Path.GetFileNameWithoutExtension(FilePath);
 

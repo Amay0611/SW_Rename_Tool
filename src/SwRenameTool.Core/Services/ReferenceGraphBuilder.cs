@@ -21,11 +21,15 @@ namespace SwRenameTool.Core.Services;
 /// Component2を辿る）に変更した。これはSolidWorksのデザインツリーが実際に
 /// 表示する順序そのものであり、かつ真の親子階層を正確に反映する。
 ///
-/// また、最上位アセンブリを開いた状態でサブアセンブリのComponent2から
-/// GetModelDoc2()を呼ぶと、既にメモリ上にロード済みのドキュメントを
-/// 追加のOpenDoc6なしで取得できることが多く、サブアセンブリを毎回開き直す
-/// 必要がなくなる（軽量読み込み等で未解決の場合のみ、フォールバックとして
-/// 明示的にOpenDoc6で開く）。
+/// サブアセンブリへの再帰は Component2.GetModelDoc2() で直接取得したドキュメントを使い、
+/// OpenDoc6での開き直しや親の明示的なクローズは行わない（動作実績のあるVBAマクロの
+/// 実装に合わせた）。
+///
+/// また、Feature.GetSpecificFeature2()がまれにNothing(null)を返すことがある
+/// （実機・VBAマクロ双方で確認済みの既知の挙動）。その場合、対象アセンブリドキュメント
+/// 自体（AssemblyDoc）からGetComponents(False)で直接の子コンポーネント一覧を取得し、
+/// フィーチャー名と一致するComponent2を探すフォールバックを行う
+/// （FindComponentByFeatureName）。
 ///
 /// SolidWorks.Interop.sldworks.dll / swconst.dll への早期バインディングを使う。
 /// GetPackAndGo等、後期バインディングでは正しく動作しないAPIがあることを実機で確認したため。
@@ -71,7 +75,7 @@ public sealed class ReferenceGraphBuilder : IReferenceGraphBuilder
 
         try
         {
-            WalkDesignTree(sldWorks, topNode, topModel, nodesByPath, scopePaths, processedAssemblies, ct);
+            WalkDirectChildren(sldWorks, topNode, topModel, nodesByPath, scopePaths, processedAssemblies, ct);
         }
         finally
         {
@@ -86,10 +90,12 @@ public sealed class ReferenceGraphBuilder : IReferenceGraphBuilder
     }
 
     /// <summary>
-    /// FeatureManagerツリーを上から順にたどり、Component2（Reference型のフィーチャー）を
-    /// SolidWorksのデザインツリーの表示順そのままで処理する。サブアセンブリは再帰的に辿る。
+    /// 開かれているアセンブリのFeatureManagerツリーを上から順にたどり、直接の子
+    /// （Reference型のフィーチャー＝Component2）をSolidWorksのデザインツリーの表示順
+    /// そのままで処理する。サブアセンブリはComponent2.GetModelDoc2()で取得した
+    /// ドキュメントに対して、その場で再帰的に辿る（動作実績のあるVBAマクロと同じ方式）。
     /// </summary>
-    private void WalkDesignTree(
+    private void WalkDirectChildren(
         ISldWorks sldWorks,
         FileNode parentNode,
         ModelDoc2 parentModel,
@@ -105,31 +111,54 @@ public sealed class ReferenceGraphBuilder : IReferenceGraphBuilder
         {
             ct.ThrowIfCancellationRequested();
 
-            if (feat.GetTypeName2() == "Reference" &&
-                feat.GetSpecificFeature2() is Component2 comp)
+            if (feat.GetTypeName2() == "Reference")
             {
-                var childPath = comp.GetPathName();
+                var comp = feat.GetSpecificFeature2() as Component2;
 
-                // 抑制されたコンポーネントもリネーム対象に含める（BOM上は実在するファイルのため）。
-                // 同じ部品が複数個使われている場合（ボルト4本等）は、ファイルとしては1つなので
-                // 初回のみ処理する。
-                if (!string.IsNullOrEmpty(childPath) && seenInThisAssembly.Add(childPath))
+                // GetSpecificFeature2()がNothing(null)を返すことがある（実機・VBAマクロ双方で
+                // 確認済み）。その場合、親のGetComponents(False)で直接の子を列挙し、
+                // フィーチャー名と一致するComponent2を探す。
+                comp ??= FindComponentByFeatureName(parentModel, feat.Name);
+
+                if (comp != null)
                 {
-                    var childType = GetFileTypeFromExtension(childPath);
-                    var childNode = GetOrCreateNode(nodesByPath, childPath, childType);
-                    childNode.IsToolboxPart = IsToolboxPart(sldWorks, childPath);
-                    scopePaths.Add(childPath);
+                    var childPath = comp.GetPathName();
 
-                    if (!childNode.Parents.Contains(parentNode))
+                    // 抑制されたコンポーネントもリネーム対象に含める（BOM上は実在するファイルのため）。
+                    // 同じ部品が複数個使われている場合（ボルト4本等）は、ファイルとしては1つなので
+                    // 初回のみ処理する。
+                    if (!string.IsNullOrEmpty(childPath) && seenInThisAssembly.Add(childPath))
                     {
-                        childNode.Parents.Add(parentNode);
-                        parentNode.Children.Add(childNode); // デザインツリー表示順のまま追加
-                    }
+                        var childType = GetFileTypeFromExtension(childPath);
+                        var childNode = GetOrCreateNode(nodesByPath, childPath, childType);
+                        childNode.IsToolboxPart = IsToolboxPart(sldWorks, childPath);
+                        scopePaths.Add(childPath);
 
-                    if (childType == SwFileType.Assembly && processedAssemblies.Add(childPath))
-                    {
-                        RecurseIntoSubAssembly(sldWorks, comp, childNode, childPath,
-                            nodesByPath, scopePaths, processedAssemblies, ct);
+                        if (!childNode.Parents.Contains(parentNode))
+                        {
+                            childNode.Parents.Add(parentNode);
+                            parentNode.Children.Add(childNode); // デザインツリー表示順のまま追加
+                        }
+
+                        if (childType == SwFileType.Assembly && processedAssemblies.Add(childPath))
+                        {
+                            var childModel = comp.GetModelDoc2() as ModelDoc2;
+                            if (childModel != null)
+                            {
+                                try
+                                {
+                                    WalkDirectChildren(sldWorks, childNode, childModel,
+                                        nodesByPath, scopePaths, processedAssemblies, ct);
+                                }
+                                finally
+                                {
+                                    // GetModelDoc2()で取得したドキュメントは、最上位アセンブリの
+                                    // 一部としてSolidWorksが管理しているため、CloseDocは呼ばない
+                                    // （呼ぶと最上位側の表示が壊れる）。COM参照の解放のみ行う。
+                                    Marshal.ReleaseComObject(childModel);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -139,48 +168,41 @@ public sealed class ReferenceGraphBuilder : IReferenceGraphBuilder
     }
 
     /// <summary>
-    /// サブアセンブリを辿る。
-    /// 当初は Component2.GetModelDoc2() で最上位アセンブリに既にロード済みのドキュメントを
-    /// 再利用し、追加のOpenDoc6を省く最適化を試みていたが、実機で
-    /// 「サブアセンブリ自体は検出されるが、その配下のパーツが一切検出されない」不具合が発生し、
-    /// 軽量読み込み無効化（SolidWorksSession参照）を行っても解消しなかった。
-    /// GetModelDoc2()経由のドキュメントはFirstFeature()の走査で期待通りの結果を
-    /// 返さないことがあると考えられるため、確実性を優先し、サブアセンブリは常に
-    /// 明示的にOpenDoc6で開き直す方式に単純化した（パフォーマンスより正確性を優先）。
+    /// Feature.GetSpecificFeature2()がNothing(null)を返した場合のフォールバック。
+    /// 対象アセンブリドキュメント自体（IAssemblyDoc）からGetComponents(False)で
+    /// 直接の子コンポーネント一覧を取得し、フィーチャー名と一致するComponent2を探す
+    /// （動作実績のあるVBAマクロと同じロジック。GetComponentsはComponent2ではなく
+    /// AssemblyDoc側のメソッドのため、ModelDoc2をAssemblyDocにキャストして呼び出す）。
     /// </summary>
-    private void RecurseIntoSubAssembly(
-        ISldWorks sldWorks,
-        Component2 comp,
-        FileNode childNode,
-        string childPath,
-        Dictionary<string, FileNode> nodesByPath,
-        HashSet<string> scopePaths,
-        HashSet<string> processedAssemblies,
-        CancellationToken ct)
+    private static Component2? FindComponentByFeatureName(ModelDoc2 modelDoc, string featureName)
     {
-        int errors = 0, warnings = 0;
-        var childModel = sldWorks.OpenDoc6(
-            childPath,
-            (int)swDocumentTypes_e.swDocASSEMBLY,
-            (int)swOpenDocOptions_e.swOpenDocOptions_Silent,
-            "",
-            ref errors,
-            ref warnings);
-
-        if (childModel == null)
-        {
-            return; // 開けない場合はこの階層で打ち切る（それ以上は辿れない）
-        }
-
         try
         {
-            WalkDesignTree(sldWorks, childNode, childModel, nodesByPath, scopePaths, processedAssemblies, ct);
+            if (modelDoc is not AssemblyDoc assemblyDoc)
+            {
+                return null;
+            }
+
+            if (assemblyDoc.GetComponents(false) is not object[] comps)
+            {
+                return null;
+            }
+
+            foreach (var c in comps)
+            {
+                if (c is Component2 candidate &&
+                    string.Equals(candidate.Name2, featureName, StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
+            }
         }
-        finally
+        catch
         {
-            CloseDocument(sldWorks, childModel);
-            Marshal.ReleaseComObject(childModel);
+            // 取得できない場合はnullを返し、呼び出し元でこのコンポーネントをスキップする。
         }
+
+        return null;
     }
 
     /// <summary>

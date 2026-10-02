@@ -29,7 +29,7 @@
 
             <!-- 一覧: サムネイル/変更前/変更後/参照元/状態 -->
             <DataGrid Grid.Column="0" ItemsSource="{Binding Rows}" AutoGenerateColumns="False"
-                      IsReadOnly="False" CanUserAddRows="False"
+                      IsReadOnly="False" CanUserAddRows="False" CanUserSortColumns="False"
                       SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
                       RowHeight="36">
                 <DataGrid.ColumnHeaderStyle>
@@ -65,7 +65,7 @@
                     <DataGridTemplateColumn Header="変更前" Width="1.5*" IsReadOnly="True">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding FileName}" Margin="{Binding IndentMargin}"
+                                <TextBlock Text="{Binding DisplayFileName}" FontFamily="Consolas"
                                            VerticalAlignment="Center" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -87,20 +87,6 @@
                                          ElementStyle="{StaticResource CenteredCellText}" />
                     <DataGridTextColumn Header="備考" Binding="{Binding ExclusionReason}" Width="150" IsReadOnly="True"
                                          ElementStyle="{StaticResource CenteredCellText}" />
-                    <DataGridCheckBoxColumn Header="連動" Binding="{Binding IsNameSyncLocked}" Width="48">
-                        <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
-                                <Setter Property="VerticalAlignment" Value="Center" />
-                                <Setter Property="HorizontalAlignment" Value="Center" />
-                            </Style>
-                        </DataGridCheckBoxColumn.ElementStyle>
-                        <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
-                                <Setter Property="VerticalAlignment" Value="Center" />
-                                <Setter Property="HorizontalAlignment" Value="Center" />
-                            </Style>
-                        </DataGridCheckBoxColumn.EditingElementStyle>
-                    </DataGridCheckBoxColumn>
                 </DataGrid.Columns>
             </DataGrid>
 

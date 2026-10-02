@@ -1,0 +1,78 @@
+## .NET / Visual Studio 系のビルド成果物
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Bb]uild/
+[Oo]ut/
+
+## Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## テスト・カバレッジ
+[Tt]est[Rr]esult*/
+*.trx
+coverage*.json
+coverage*.xml
+coverage*.info
+
+## ログ・一時ファイル
+*.log
+*.tmp
+*~
+*.bak
+
+## OS固有ファイル
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+## ---------------------------------------------------------------
+## このプロジェクト固有
+## ---------------------------------------------------------------
+
+# SolidWorks Interopアセンブリ（ライセンス上リポジトリに含めない。
+# 各自のSolidWorksインストールフォルダからthirdparty/README.txtの手順でコピーする）
+thirdparty/*.dll
+
+# 検証・テストで使ったSolidWorksファイル一式やバックアップフォルダを誤って
+# 含めないためのガード（テスト用データを別リポジトリ・別フォルダで管理する場合）
+_backup/
+*.sldprt
+*.SLDPRT
+*.sldasm
+*.SLDASM
+*.slddrw
+*.SLDDRW
+# 上記でリポジトリに含めたいサンプル/テストデータがある場合は、
+# 個別に ! (否定パターン) で明示的に許可してください。
+# 例: !samples/**/*.SLDPRT
+
+# SolidWorksが開いている間に生成されるロックファイル
+~$*.sld*
+
+# リネーム実行時のログ・バックアップ
+rename_log_*.csv

@@ -148,10 +148,11 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 選択アセンブリを起点に深さ優先探索し、親子関係が分かる順序に並べ替える。
-    /// 図面(LinkedDrawing)は対応する3Dモデルの直後・同じ階層に配置する。
-    /// 複数の親を持つ共有部品は、最初に辿り着いた親の下に1回だけ表示する
-    /// （参照元数は「参照」列で別途確認できるため、重複表示はしない）。
+    /// 選択アセンブリを起点に深さ優先探索し、親子関係が罫線文字（├─/└─/│）で分かる
+    /// 表示順に並べ替える。図面(LinkedDrawing)は対応する3Dモデルと同じ階層（同じ
+    /// プレフィックス）でその直後に配置する。複数の親を持つ共有部品は、最初に
+    /// 辿り着いた親の下に1回だけ表示する（参照元数は「参照」列で別途確認できるため、
+    /// 重複表示はしない）。
     /// </summary>
     private List<FileRowViewModel> BuildTreeOrderedRows(FileNode? root, IReadOnlyList<FileNode> allNodes)
     {
@@ -159,34 +160,43 @@ public partial class MainViewModel : ObservableObject
         var scopeSet = new HashSet<FileNode>(allNodes);
         var visited = new HashSet<FileNode>();
 
-        void Visit(FileNode node, int depth)
+        // ownPrefix: この行自体の先頭に付ける罫線（例: "│　├─ "）。ルートは空文字。
+        // continuationPrefix: この行の「子」を描画する際、先頭に引き継ぐ縦線部分
+        //   （自分が兄弟内で最後なら空白、まだ続くなら "│　" で下に線を伸ばす）。
+        void Visit(FileNode node, string ownPrefix, string continuationPrefix)
         {
             if (!visited.Add(node) || !_rowByNode.TryGetValue(node, out var row))
             {
                 return;
             }
 
-            row.IndentLevel = depth;
+            row.TreePrefix = ownPrefix;
             ordered.Add(row);
 
+            // 図面はモデルと同じ階層（同じプレフィックス）で直後に表示する
+            // （ツリー上の「子」ではなく、モデルに付随する行という位置づけのため）。
             if (node.LinkedDrawing != null &&
                 scopeSet.Contains(node.LinkedDrawing) &&
                 visited.Add(node.LinkedDrawing) &&
                 _rowByNode.TryGetValue(node.LinkedDrawing, out var drawingRow))
             {
-                drawingRow.IndentLevel = depth; // モデルと同じ階層に表示
+                drawingRow.TreePrefix = ownPrefix;
                 ordered.Add(drawingRow);
             }
 
-            foreach (var child in node.Children.Where(scopeSet.Contains))
+            var children = node.Children.Where(scopeSet.Contains).ToList();
+            for (int i = 0; i < children.Count; i++)
             {
-                Visit(child, depth + 1);
+                var isLast = i == children.Count - 1;
+                var childOwnPrefix = continuationPrefix + (isLast ? "└─ " : "├─ ");
+                var childContinuationPrefix = continuationPrefix + (isLast ? "　　" : "│　");
+                Visit(children[i], childOwnPrefix, childContinuationPrefix);
             }
         }
 
         if (root != null)
         {
-            Visit(root, 0);
+            Visit(root, string.Empty, string.Empty);
         }
 
         // 走査で辿り着かなかったノードがあれば（想定外のケース）末尾に追加しておく。
@@ -194,7 +204,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (visited.Add(node) && _rowByNode.TryGetValue(node, out var row))
             {
-                row.IndentLevel = 0;
+                row.TreePrefix = string.Empty;
                 ordered.Add(row);
             }
         }
@@ -222,7 +232,6 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// 行の変更後ファイル名が編集されたとき、紐付いた図面の名前を自動追従させる。
-    /// 図面側で「連動解除」（IsNameSyncLocked）されている場合は追従しない。
     /// </summary>
     private void OnRowNewBaseNameEdited(object? sender, EventArgs e)
     {
@@ -235,11 +244,6 @@ public partial class MainViewModel : ObservableObject
         if (drawingNode == null || !_rowByNode.TryGetValue(drawingNode, out var drawingRow))
         {
             return;
-        }
-
-        if (drawingRow.IsNameSyncLocked)
-        {
-            return; // 個別解除済みなので追従しない
         }
 
         drawingRow.ApplySyncedName(row.NewBaseName);

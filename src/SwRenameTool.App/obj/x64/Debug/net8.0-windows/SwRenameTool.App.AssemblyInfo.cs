@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AMADA CO.,LTD.")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b2f5bc10ed03d035252e13f6cf1442c179e305c0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+296f810a0a41dabfd1c5eac07cbfd911476bddc3")]
 [assembly: System.Reflection.AssemblyProductAttribute("SwRenameTool.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SwRenameTool.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

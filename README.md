@@ -88,15 +88,19 @@ SolidWorks公式のビルド済みPrimary Interop Assembly（PIA）が同梱さ�
      直接の子として扱われてしまう（`GetDependencies2`は常に全階層をフラットに返すため）。
 
   そのため、`ModelDoc2.FirstFeature`/`Feature.GetNextFeature`/`Feature.GetSpecificFeature2`で
-  `Component2`を辿るFeatureManagerツリー走査方式（`WalkDesignTree`）に変更した。これは
+  `Component2`を辿るFeatureManagerツリー走査方式（`WalkDirectChildren`）に変更した。これは
   SolidWorksのデザインツリーが実際に表示する順序そのものであり、かつ真の親子階層を正確に
-  反映する。サブアセンブリへの再帰時は、`Component2.GetModelDoc2()`で既にメモリ上に
-  ロード済みのドキュメントを取得できることが多く、追加の`OpenDoc6`が不要になる
-  （軽量読み込み等で未解決の場合のみ、フォールバックとして明示的に開く）。
+  反映する。サブアセンブリへの再帰は`Component2.GetModelDoc2()`で取得したドキュメントに
+  対してその場で再帰呼び出しを行う（`OpenDoc6`での開き直しや親の明示的なクローズは行わない）。
+  また、`Feature.GetSpecificFeature2()`がまれに`Nothing`（null）を返すことがあるため、
+  その場合は対象アセンブリのルートコンポーネントから`GetComponents(False)`で直接の子を
+  列挙し、フィーチャー名と一致する`Component2`を探すフォールバックを行う
+  （`FindComponentByFeatureName`。社内で実績のあるVBAマクロの実装に合わせた。
+  詳細は「既知の注意点」参照）。
   `MarkOutOfScopeReferences`（対象フォルダ内の他アセンブリの高速スキャン）では、
   順序を必要としないため引き続き`GetDependencies2`ベースの`OpenAndGetFlatDependencies`を使う。
 - **一覧の並び順（ツリー順表示）**: `MainViewModel.BuildTreeOrderedRows`が`FileNode.Children`を
-  深さ優先探索して並び替える設計は、上記の`WalkDesignTree`への変更により、`Children`の内容
+  深さ優先探索して並び替える設計は、上記の`WalkDirectChildren`への変更により、`Children`の内容
   そのものがSolidWorksのデザインツリーと一致する正確なものになったため、実質的に
   SolidWorksのデザインツリー順の表示になった。
 - `ReferenceGraphBuilder.MarkOutOfScopeReferences()`: 実装済み・実機動作確認済み。対象アセンブリと
@@ -146,7 +150,8 @@ SolidWorks公式のビルド済みPrimary Interop Assembly（PIA）が同梱さ�
 - **WPF本体（`MainViewModel`/`MainWindow`）**: `Core`の各サービスと結線済み。
   アセンブリ選択→参照解析→一覧表示→Dry Run→バックアップ＆実行、の一連の流れが動作する。
   図面の自動追従（`FileRowViewModel.NewBaseNameEdited`イベント経由で`MainViewModel`が
-  紐付いた図面行に反映、「連動解除」チェック時は追従しない）も実装済み。
+  紐付いた図面行に反映）も実装済み。当初は行ごとに個別解除できる「連動」チェック列が
+  あったが、不要という判断で削除し、図面は常にパーツ名に追従する仕様にした。
   Dry Run結果は`DryRunMessages`（警告・エラーの文字列一覧）としてUIに表示される。
 - **サムネイル表示**: 実装済み。当初はSwDM APIの`GetPreviewBitmap`を想定していたが、
   SwDM API自体を開発者キーが取得できず断念した経緯があるため、Windows Shell API
@@ -160,11 +165,17 @@ SolidWorks公式のビルド済みPrimary Interop Assembly（PIA）が同梱さ�
   （`FileRowViewModel.LargeThumbnail`）。
 - **一覧の並び順（ツリー順表示）**: 実装済み。当初は`ReferenceGraphBuilder`が返す一覧の順序
   （内部的にDictionaryから生成されるため親子関係とは無関係）のままだったが、親子関係が
-  分かりにくいという指摘を受け、選択アセンブリを起点に深さ優先探索で並べ替え、階層に応じて
-  左マージンでインデントを付ける表示に変更した（`MainViewModel.BuildTreeOrderedRows`、
-  `FileRowViewModel.IndentLevel`/`IndentMargin`）。図面は対応する3Dモデルの直後・同じ階層に
-  配置する。複数の親を持つ共有部品は、最初に辿り着いた親の下に1回だけ表示する
-  （行を複製すると編集の同期は取れるが表示が紛らわしいため。参照元数は「参照」列で確認できる）。
+  分かりにくいという指摘を受け、選択アセンブリを起点に深さ優先探索で並べ替える表示に変更した
+  （`MainViewModel.BuildTreeOrderedRows`）。当初は階層に応じた左マージンでのインデント
+  （`IndentLevel`/`IndentMargin`）だったが、Excelの部品表でよく使われる罫線文字
+  （`├─`・`└─`・`│`）によるツリー表現の方が親子関係が分かりやすいという要望を受けて
+  変更した（`FileRowViewModel.TreePrefix`/`DisplayFileName`）。深さ優先探索の過程で、
+  各ノードについて「兄弟の中で最後かどうか」を判定し、`└─`（最後）と`├─`（それ以外）を
+  使い分け、祖先の階層がまだ続く場合は`│`で縦線を伸ばす。罫線文字は等幅フォント
+  （`Consolas`）でないと縦の線がずれるため、「変更前」列のセルにだけ指定している。
+  図面は対応する3Dモデルの直後・同じ階層（同じプレフィックス）に配置する。複数の親を持つ
+  共有部品は、最初に辿り着いた親の下に1回だけ表示する（行を複製すると編集の同期は取れるが
+  表示が紛らわしいため。参照元数は「参照」列で確認できる）。
 - **SolidWorksとのCOM通信は専用STAスレッドに固定**（`SolidWorksSession`が内部で1本の
   専用スレッドを起動し、`Dispatcher`のメッセージポンプ経由で呼び出しを中継する）。
   当初`Task.Run`でThreadPoolのスレッドから都度呼び出す実装にしていたところ、
@@ -258,16 +269,33 @@ PackAndGoPoc.exe deps "C:\SwTest\Assem1.sldasm"
 
 ## 既知の注意点
 
-- **`Component2.GetModelDoc2()`経由でサブアセンブリを辿ると、配下のパーツが検出できない
-  ことがある。** `WalkDesignTree`実装後、実機で「サブアセンブリ自体は表示されるが、
-  その配下のパーツが検出されない」不具合が発生した。当初は軽量読み込み
-  （Lightweight Components、`GetModelDoc2()`が`null`を返す公式仕様）が原因と考え、
-  `SolidWorksSession`で`SetUserPreferenceToggle(swAutoLoadPartsLightweight, false)`を
-  設定して完全解決読み込みを強制したが、これでも解消しなかった。最終的に、
-  `GetModelDoc2()`経由の最適化（既にロード済みのドキュメントを再利用し、追加の
-  `OpenDoc6`を省く）自体を廃止し、サブアセンブリは常に`OpenDoc6`で明示的に開き直す
-  方式に単純化して解決した（パフォーマンスより正確性を優先。`RecurseIntoSubAssembly`）。
-  軽量読み込み無効化の設定自体は、副作用がないため残してある。
+- **`Feature.GetSpecificFeature2()`が、サブアセンブリ内の一部コンポーネントに対して
+  `Nothing`（null）を返すことがある。** `WalkDesignTree`実装後、実機で「サブアセンブリ
+  自体は表示されるが、その配下のパーツが検出されない」不具合が発生した。
+  複数の誤った仮説を経由した：
+  1. `Component2.GetModelDoc2()`（既にロード済みのドキュメントを再利用する最適化）を疑い、
+     常に`OpenDoc6`で明示的に開き直す方式に単純化したが、解消しなかった。
+  2. 軽量読み込み（Lightweight Components）を疑い、`SolidWorksSession`で
+     `SetUserPreferenceToggle(swAutoLoadPartsLightweight, false)`を設定したが、
+     解消しなかった。
+  3. 「親アセンブリを開いたまま子を`OpenDoc6`すると簡略化された参照が返る」と推測し、
+     同時に開くアセンブリを1つだけにするキュー方式に変更したが、これも解消しなかった。
+
+  実際の原因は、社内で実績のあるVBAマクロとの比較で判明した：**`Feature.
+  GetSpecificFeature2()`がサブアセンブリ内の一部コンポーネントに対してまれに
+  `Nothing`を返す**という、SolidWorks側の既知の挙動だった。VBAマクロ側では、これが
+  発生した場合に**対象アセンブリのアクティブコンフィギュレーションのルートコンポーネントから
+  `GetComponents(False)`で直接の子コンポーネント一覧を取得し、フィーチャー名と一致する
+  `Component2`を探す**というフォールバック処理が組み込まれており、これを移植することで
+  解決した（`FindComponentByFeatureName`）。ただし`GetComponents`は`Component2`ではなく
+  `AssemblyDoc`（アセンブリドキュメント自体）側のメソッドであり、VBAコードの変数宣言
+  （`GetRootComponent3`の戻り値を`AssemblyDoc`型の変数で受けていた）は型として正確ではない
+  late-bindingならではの書き方だったため、C#移植時は`ModelDoc2`を`AssemblyDoc`に
+  キャストして`GetComponents(False)`を呼ぶ形に修正した（コンパイルエラーで判明）。
+  また、この過程で`Component2.GetModelDoc2()`（OpenDoc6での開き直し不要）や、
+  親を開いたままの再帰呼び出し自体は正しい設計だったことも判明したため、キュー方式は
+  撤回し、素直な再帰呼び出しに戻した。軽量読み込み無効化の設定自体は、副作用がないため
+  残してある。
 - **`ToolboxDetector`が当初、誤ったレジストリキーを参照していた。**
   `Software\SolidWorks\Applications\Toolbox\BrowserPath`という架空のキーを見ており、
   常にToolboxパス検出0件（＝Toolbox部品が一切除外されない）状態だった。
@@ -363,4 +391,4 @@ PackAndGoPoc.exe deps "C:\SwTest\Assem1.sldasm"
 - リネーム実行のキャンセルは安全なタイミング（ファイル単位、ただしPack and Go実行前まで）でのみ可能
 - 実行失敗時は自動ロールバックせず、エラー表示のうえ手動復元を促す
 - CSVインポートは行わず、UI上で直接編集
-- 図面はパーツ名に自動追従するが、行ごとに個別解除が可能
+- 図面はパーツ名に常に自動追従する（個別解除はできない仕様）

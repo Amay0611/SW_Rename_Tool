@@ -1,4 +1,3 @@
-using System.Windows;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SwRenameTool.Core.Models;
@@ -42,14 +41,14 @@ public partial class FileRowViewModel : ObservableObject
 
     public bool IsLinkedDrawingRow => Node.FileType == SwFileType.Drawing;
 
-    /// <summary>ツリー表示時の階層の深さ（0=最上位アセンブリ）。MainViewModelが並び替え時に設定する。</summary>
+    /// <summary>ツリー表示用の罫線文字プレフィックス（例: "│　├─ "）。MainViewModelが並び替え時に設定する。</summary>
     [ObservableProperty]
-    private int _indentLevel;
+    private string _treePrefix = string.Empty;
 
-    /// <summary>IndentLevelに応じた左マージン。「変更前」列の表示インデントに使う。</summary>
-    public Thickness IndentMargin => new(IndentLevel * 16, 0, 0, 0);
+    /// <summary>「変更前」列に表示する、罫線プレフィックス付きのファイル名。</summary>
+    public string DisplayFileName => TreePrefix + FileName;
 
-    partial void OnIndentLevelChanged(int value) => OnPropertyChanged(nameof(IndentMargin));
+    partial void OnTreePrefixChanged(string value) => OnPropertyChanged(nameof(DisplayFileName));
 
     /// <summary>サムネイル（小、一覧表示用）。非同期・遅延ロードで後から設定される。未取得の間はnull。</summary>
     [ObservableProperty]
@@ -70,14 +69,6 @@ public partial class FileRowViewModel : ObservableObject
     {
         Node.NewBaseName = value;
         NewBaseNameEdited?.Invoke(this, EventArgs.Empty);
-    }
-
-    [ObservableProperty]
-    private bool _isNameSyncLocked;
-
-    partial void OnIsNameSyncLockedChanged(bool value)
-    {
-        Node.IsNameSyncOverridden = value;
     }
 
     /// <summary>
