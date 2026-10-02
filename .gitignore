@@ -9,6 +9,7 @@ x86/
 [Aa][Rr][Mm]64/
 [Bb]uild/
 [Oo]ut/
+[Pp]ublish/
 
 ## Visual Studio Code
 .vscode/*
